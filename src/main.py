@@ -51,3 +51,19 @@ for i in range(num_examples):
         f"Real = {y_real[i]} | "
         f"Predicción = {predictions[i]}"
     )
+
+print("\n=== ACCURACY DE ENTRENAMIENTO ===")
+
+train_predictions = model.predict(X_train)
+
+correct = 0
+
+for real, predicted in zip(y_train, train_predictions):
+    if real == predicted:
+        correct += 1
+
+accuracy = correct / len(y_train)
+
+print(f"Predicciones correctas: {correct} de {len(y_train)}")
+print(f"Accuracy de entrenamiento: {accuracy:.4f}")
+print(f"Accuracy de entrenamiento: {accuracy * 100:.2f}%")
