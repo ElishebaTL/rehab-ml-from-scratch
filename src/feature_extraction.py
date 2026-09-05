@@ -1,36 +1,100 @@
 from pathlib import Path
 import numpy as np
+import pandas as pd
 
-# Ruta al dataset original
+# --------------------------------------------------
+# RUTA AL DATASET ORIGINAL
+# --------------------------------------------------
+
 DATASET_PATH = Path(
     r"C:\Users\elish\OneDrive - Instituto Tecnologico y de Estudios Superiores de Monterrey\Desktop\bs\REHAB\REHAB\Rehab_exercise\d02_processed_data"
 )
 
-# Archivo de prueba
-archivo = DATASET_PATH / "000_1.npy"
+# --------------------------------------------------
+# CONFIGURACIÓN
+# --------------------------------------------------
 
-datos = np.load(archivo)
+canales = ["f1", "f2", "f3", "f4", "f5", "pitch3"]
 
-print("Shape del archivo:", datos.shape)
+actividades_excluidas = {"014"}
 
-# Tomamos SOLO la primera muestra/ejecución
-muestra = datos[0]
+filas = []
 
-print("Shape de una muestra:", muestra.shape)
+# --------------------------------------------------
+# RECORRER ACTIVIDADES
+# --------------------------------------------------
 
-# Extraer features por canal
-features = []
+for i in range(16):
+    actividad = f"{i:03d}"
 
-for canal in range(muestra.shape[1]):
-    valores = muestra[:, canal]
+    # Excluir actividad 014
+    if actividad in actividades_excluidas:
+        print(f"Actividad {actividad} excluida.")
+        continue
 
-    features.extend([
-        np.mean(valores),
-        np.std(valores),
-        np.min(valores),
-        np.max(valores)
-    ])
+    archivo = DATASET_PATH / f"{actividad}_2.npy"
 
-print("Cantidad de features:", len(features))
-print("Features:")
-print(features)
+    if not archivo.exists():
+        print(f"No se encontró: {archivo.name}")
+        continue
+
+    datos = np.load(archivo)
+
+    print(
+        f"Procesando actividad {actividad} "
+        f"con {datos.shape[0]} muestras..."
+    )
+
+    # --------------------------------------------------
+    # CADA MUESTRA TIENE SHAPE (880, 6)
+    # --------------------------------------------------
+
+    for muestra in datos:
+
+        fila = {}
+
+        for indice_canal, nombre_canal in enumerate(canales):
+
+            valores = muestra[:, indice_canal]
+
+            fila[f"{nombre_canal}_mean"] = np.mean(valores)
+            fila[f"{nombre_canal}_std"] = np.std(valores)
+            fila[f"{nombre_canal}_min"] = np.min(valores)
+            fila[f"{nombre_canal}_max"] = np.max(valores)
+
+        # Etiqueta de clase
+        fila["activity"] = actividad
+
+        filas.append(fila)
+
+# --------------------------------------------------
+# CREAR DATAFRAME
+# --------------------------------------------------
+
+df = pd.DataFrame(filas)
+
+print("\n=== DATASET GENERADO ===")
+print("Shape:", df.shape)
+print("\nPrimeras filas:")
+print(df.head())
+
+print("\nActividades incluidas:")
+print(sorted(df["activity"].unique()))
+
+print("\nCantidad de muestras por actividad:")
+print(df["activity"].value_counts().sort_index())
+
+# --------------------------------------------------
+# GUARDAR CSV
+# --------------------------------------------------
+
+OUTPUT_PATH = Path(__file__).parent.parent / "data"
+
+OUTPUT_PATH.mkdir(exist_ok=True)
+
+archivo_salida = OUTPUT_PATH / "rehab_features.csv"
+
+df.to_csv(archivo_salida, index=False)
+
+print("\nArchivo guardado en:")
+print(archivo_salida)
